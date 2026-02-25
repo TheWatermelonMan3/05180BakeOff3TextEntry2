@@ -3,9 +3,6 @@ import java.util.Collections;
 import java.util.Random;
 
 String[] phrases; //contains all of the phrases
-String[] dictionary;
-final int autocompleteSize = 6;
-String[] fourWords = new String[autocompleteSize];
 int totalTrialNum = 2; //the total number of phrases to be tested - set this low for testing. Might be ~10 for the real bakeoff!
 int currTrialNum = 0; // the current trial number (indexes into trials array above)
 float startTime = 0; // time starts when the first letter is entered
@@ -28,14 +25,8 @@ final int secondButtonWidth = (int) (DPIofYourDeviceScreen * 0.091);
 final int thirdButtonWidth = (int) (DPIofYourDeviceScreen * 0.123);
 final int wideButtonWidth = (int) (DPIofYourDeviceScreen * 0.28);
 final int singleButtonHeight = (int) (DPIofYourDeviceScreen * 0.20);
-final int autocompHorizontalOffset = (int) (DPIofYourDeviceScreen * 0.50);
-final int autocompButtonWidth = (int) (DPIofYourDeviceScreen * 0.45);
-final int autocompVerticalOffset = (int) (DPIofYourDeviceScreen * 0.33);
-final int autocompButtonHeight = (int) (DPIofYourDeviceScreen * 0.28);
 int lastClick = -1000;
 int lastClickedButton = -1;
-int wwp = 0;
-int preflen;
 
 String [] alphabet = {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m"};
 
@@ -60,15 +51,6 @@ class ButtonBound {
     this.w = w;
     this.h = h;
   }
-}
-
-ButtonBound get4WordBound(int n) {
-    int col = n % 2;
-    int row = n / 2;
-    return new ButtonBound((width/2) + (int) ((col-0.5)*autocompHorizontalOffset) - (autocompButtonWidth/2),
-                           (height/2) + (int) ((row-1.5)*buttonVerticalOffset) - (singleButtonHeight/2),
-                           autocompButtonWidth,
-                           singleButtonHeight);
 }
 
 ButtonBound getButtonBound(int n) {
@@ -105,65 +87,6 @@ ButtonBound getButtonBound(int n) {
 //Variables for my silly implementation. You can delete this:
 char currentLetter = 'a';
 
-int wordsWithPrefix() {
-    if (currentTyped.length() == 0) return 0;
-    String prefix;
-    int spaceIdx = currentTyped.lastIndexOf(" ");
-    if (spaceIdx == -1) prefix = currentTyped;
-    else if (spaceIdx + 1 == currentTyped.length()) return 0;
-    else prefix = currentTyped.substring(spaceIdx+1);
-    preflen = prefix.length();
-    int count = 0;
-    int start = 0;
-    int end = dictionary.length - 1;
-    int mid = 0;
-    String word;
-    int substrlen;
-    int compare;
-    while (start <= end) {
-      mid = start + ((end - start) / 2);
-      word = dictionary[mid];
-      substrlen = Math.min(word.length(), preflen);
-      compare = word.substring(0,substrlen).compareTo(prefix.substring(0,substrlen));
-      if (compare < 0){
-        start = mid + 1;
-      } else if (compare > 0) {
-        end = mid - 1;
-      } else {
-        for (int i = 0; i<(autocompleteSize+1) && (mid-i) >= 0; i++){
-          word = dictionary[mid-i];
-          if (word.length() >= preflen && prefix.equals(word.substring(0,preflen))) {
-            if (count < autocompleteSize) fourWords[count] = word;
-            count++;
-            System.out.println(count + ": " + word);
-          }
-        }
-        for (int i = 1; i < (autocompleteSize+1) && (mid+i) < dictionary.length; i++) {
-          word = dictionary[mid+i];
-          if (word.length() >= preflen && prefix.equals(word.substring(0,preflen))) {
-            if (count < autocompleteSize) fourWords[count] = word;
-            count++;
-            System.out.println(count + ": " + word);
-          }
-        }
-        if (count > autocompleteSize) return 0;
-        return count;
-      }
-    }
-    return 0;
-    
-    /*for (int i = 0; i<dictionary.length; i++) {
-      String word = dictionary[i];
-      if (word.length() >= preflen && prefix.equals(word.substring(0,preflen))) {
-        if (count < autocompleteSize) fourWords[count] = word;
-        System.out.println(word);
-        count++;
-        if (count > autocompleteSize) return 0;
-      }
-    }
-    return count;*/
-}
-
 //You can modify anything in here. This is just a basic implementation.
 void setup()
 {
@@ -171,8 +94,6 @@ void setup()
   watch = loadImage("watchhand3smaller.png");
   //finger = loadImage("pngeggSmaller.png"); //not using this
   phrases = loadStrings("phrases2.txt"); //load the phrase set into memory
-  dictionary = loadStrings("words_alpha.txt");
-  Arrays.sort(dictionary);
   Collections.shuffle(Arrays.asList(phrases), new Random()); //randomize the order of the phrases with no seed
   //Collections.shuffle(Arrays.asList(phrases), new Random(100)); //randomize the order of the phrases with seed 100; same order every time, useful for testing
  
@@ -185,134 +106,128 @@ void setup()
 //You can modify anything in here. This is just a basic implementation.
 void draw()
 {
-  background(255); //clear background
+  background(255);
   
-   //check to see if the user finished. You can't change the score computation.
   if (finishTime!=0)
   {
     fill(0);
     textAlign(CENTER);
-    text("Trials complete!",400,200); //output
-    text("Total time taken: " + (finishTime - startTime),400,220); //output
-    text("Total letters entered: " + lettersEnteredTotal,400,240); //output
-    text("Total letters expected: " + lettersExpectedTotal,400,260); //output
-    text("Total errors entered: " + errorsTotal,400,280); //output
-    float wpm = (lettersEnteredTotal/5.0f)/((finishTime - startTime)/60000f); //FYI - 60K is number of milliseconds in minute
-    text("Raw WPM: " + wpm,400,300); //output
-    float freebieErrors = lettersExpectedTotal*.05; //no penalty if errors are under 5% of chars
-    text("Freebie errors: " + nf(freebieErrors,1,3),400,320); //output
+    text("Trials complete!",400,200);
+    text("Total time taken: " + (finishTime - startTime),400,220);
+    text("Total letters entered: " + lettersEnteredTotal,400,240);
+    text("Total letters expected: " + lettersExpectedTotal,400,260);
+    text("Total errors entered: " + errorsTotal,400,280);
+    float wpm = (lettersEnteredTotal/5.0f)/((finishTime - startTime)/60000f);
+    text("Raw WPM: " + wpm,400,300);
+    float freebieErrors = lettersExpectedTotal*.05;
+    text("Freebie errors: " + nf(freebieErrors,1,3),400,320);
     float penalty = max(errorsTotal-freebieErrors, 0) * .5f;
     text("Penalty: " + penalty,400,340);
-    text("WPM w/ penalty: " + (wpm-penalty),400,360); //yes, minus, because higher WPM is better
+    text("WPM w/ penalty: " + (wpm-penalty),400,360);
     return;
   }
   
-  drawWatch(); //draw watch background
+  drawWatch();
   fill(100);
-  rect(width/2-sizeOfInputArea/2, height/2-sizeOfInputArea/2, sizeOfInputArea, sizeOfInputArea); //input area should be 1" by 1"
-  
+  rect(width/2-sizeOfInputArea/2, height/2-sizeOfInputArea/2, sizeOfInputArea, sizeOfInputArea);
 
   if (startTime==0 & !mousePressed)
   {
     fill(128);
     textAlign(CENTER);
-    text("Click to start time!", 280, 150); //display this messsage until the user clicks!
+    text("Click to start time!", 280, 150);
   }
-
   if (startTime==0 & mousePressed)
   {
-    nextTrial(); //start the trials!
+    nextTrial();
   }
-
   if (startTime!=0)
   {
-    //feel free to change the size and position of the target/entered phrases and next button 
-    textAlign(LEFT); //align the text left
+    textAlign(LEFT);
     fill(128);
-    text("Phrase " + (currTrialNum+1) + " of " + totalTrialNum, 70, 50); //draw the trial count
-    fill(128);
-    text("Target:   " + currentPhrase, 70, 100); //draw the target string
-    text("Entered:  " + currentTyped +"|", 70, 140); //draw what the user has entered thus far
+    text("Phrase " + (currTrialNum+1) + " of " + totalTrialNum, 70, 50);
+    text("Target:   " + currentPhrase, 70, 100);
+    text("Entered:  " + currentTyped +"|", 70, 140);
 
-    wwp = wordsWithPrefix();
-    
-    if (wwp == 0) {
-      //example design draw code
-      for (int i = 0; i < 29; i++) {
-        ButtonBound thisbutton = getButtonBound(i);
-        if (i < 26) {
-          if (lastClickedButton == i && millis() < lastClick + 1000){
-            if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(155,55,0);
-            else fill(255,155,0);
-          } else {
-            if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(155,155,0);
-            else fill(255,255,0);
-          }
-        } else if (i == 26) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(155,0,0);
-          else fill(255,0,0);
-        } else if (i == 27) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(0,55,155);
-          else fill(0,155,255);
-        } else if (i == 28) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(0,155,0);
-          else fill(0,255,0);
-        }
-        rect(thisbutton.x, thisbutton.y, thisbutton.w, thisbutton.h);
-        textAlign(CENTER);
+    // Input area bounds
+    float ax = width/2 - sizeOfInputArea/2;
+    float ay = height/2 - sizeOfInputArea/2;
+    float aw = sizeOfInputArea;
+    float ah = sizeOfInputArea;
+
+    // Split input area: top 60% = letters/row buttons, bottom 40% = utility buttons
+    float topH    = ah * 0.6;
+    float bottomH = ah * 0.4;
+    float bottomY = ay + topH;
+
+    if (lastClickedButton == -1)
+    {
+      // ---- TOP LEVEL: 3 row selector buttons stacked in top area ----
+      float rowBH = topH / 3;
+      String[] rowLabels = {"QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"};
+      for (int r = 0; r < 3; r++)
+      {
+        float bx = ax;
+        float by = ay + r * rowBH;
+        fill(200, 200, 0);
+        rect(bx, by, aw, rowBH);
         fill(0);
-        if (i < 26) {
-          text(alphabet[i], thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        } else if (i == 26) {
-          text("DEL", thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        } else if (i == 27) {
-          text("space", thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        } else if (i == 28) {
-          text("ENTER", thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        }
-      }
-    } else {
-      for (int i = 0; i < autocompleteSize; i++) {
-        ButtonBound thisbutton = get4WordBound(i);
-        if (i < wwp) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(155,155,0);
-          else fill(255,255,0);
-        } else fill (100);
-        rect(thisbutton.x, thisbutton.y, thisbutton.w, thisbutton.h);
-        if (i < wwp) {
-          textAlign(CENTER);
-          fill(0);
-          text(fourWords[i], thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        }
-      }
-      for (int i = 26; i < 29; i++) {
-        ButtonBound thisbutton = getButtonBound(i);
-        if (i == 26) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(155,0,0);
-          else fill(255,0,0);
-        } else if (i == 27) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(0,55,155);
-          else fill(0,155,255);
-        } else if (i == 28) {
-          if(mousePressed && didMouseClick(thisbutton.x,thisbutton.y,thisbutton.w,thisbutton.h)) fill(0,155,0);
-          else fill(0,255,0);
-        }
-        rect(thisbutton.x, thisbutton.y, thisbutton.w, thisbutton.h);
         textAlign(CENTER);
-        fill(0);
-        if (i == 26) {
-          text("DEL", thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        } else if (i == 27) {
-          text("space", thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        } else if (i == 28) {
-          text("ENTER", thisbutton.x + thisbutton.w/2, thisbutton.y + thisbutton.h/2);
-        }
+        text(rowLabels[r], bx + aw/2, by + rowBH/2 + 7);
       }
+
+      // Bottom area: DEL | SPACE | ENTER
+      float utilW = aw / 3;
+      fill(255, 0, 0);
+      rect(ax,             bottomY, utilW, bottomH);
+      fill(0, 155, 255);
+      rect(ax + utilW,     bottomY, utilW, bottomH);
+      fill(0, 255, 0);
+      rect(ax + 2*utilW,   bottomY, utilW, bottomH);
+      fill(0);
+      textAlign(CENTER);
+      text("DEL",   ax + utilW/2,       bottomY + bottomH/2 + 7);
+      text("SPACE", ax + utilW*1.5,     bottomY + bottomH/2 + 7);
+      text("ENTER", ax + utilW*2.5,     bottomY + bottomH/2 + 7);
+    }
+    else
+    {
+      // ---- EXPANDED ROW: individual letter buttons in top area ----
+      int start = 0, end = 0;
+      if (lastClickedButton == 0){ start=0;  end=10; }
+      if (lastClickedButton == 1){ start=10; end=19; }
+      if (lastClickedButton == 2){ start=19; end=26; }
+      int count = end - start;
+      float letterW = aw / count;
+
+      for (int i = 0; i < count; i++)
+      {
+        float bx = ax + i * letterW;
+        fill(255, 255, 0);
+        rect(bx, ay, letterW, topH);
+        fill(0);
+        textAlign(CENTER);
+        text(alphabet[start+i], bx + letterW/2, ay + topH/2 + 7);
+      }
+
+      // Bottom area: BACK | DEL | SPACE | ENTER
+      float utilW = aw / 4;
+      fill(180, 100, 255);   // back = purple
+      rect(ax,           bottomY, utilW, bottomH);
+      fill(255, 0, 0);
+      rect(ax + utilW,   bottomY, utilW, bottomH);
+      fill(0, 155, 255);
+      rect(ax + 2*utilW, bottomY, utilW, bottomH);
+      fill(0, 255, 0);
+      rect(ax + 3*utilW, bottomY, utilW, bottomH);
+      fill(0);
+      textAlign(CENTER);
+      text("BACK",  ax + utilW*0.5, bottomY + bottomH/2 + 7);
+      text("DEL",   ax + utilW*1.5, bottomY + bottomH/2 + 7);
+      text("SPACE", ax + utilW*2.5, bottomY + bottomH/2 + 7);
+      text("ENTER", ax + utilW*3.5, bottomY + bottomH/2 + 7);
     }
   }
- 
- 
-  //drawFinger(); //no longer needed as we'll be deploying to an actual touschreen device
 }
 
 //my terrible implementation you can entirely replace
@@ -324,42 +239,92 @@ boolean didMouseClick(float x, float y, float w, float h) //simple function to d
 //my terrible implementation you can entirely replace
 void mousePressed()
 {
-  if (wwp == 0) {
-    for (int i = 0; i < 29; i++) {
-        ButtonBound thisbutton = getButtonBound(i);
-        if (didMouseClick(thisbutton.x, thisbutton.y, thisbutton.w, thisbutton.h)){
-          if (i < 26) {
-            currentTyped += alphabet[i];
-          } else if (i == 26 && currentTyped.length() > 0) {
-            currentTyped = currentTyped.substring(0, currentTyped.length()-1);
-          } else if (i == 27) {
-            currentTyped += " ";
-          } else if (i == 28) {
-            nextTrial();
-          }
-        }
+  if (startTime==0) return;
+
+  // Input area bounds
+  float ax = width/2 - sizeOfInputArea/2;
+  float ay = height/2 - sizeOfInputArea/2;
+  float aw = sizeOfInputArea;
+  float ah = sizeOfInputArea;
+
+  float topH    = ah * 0.6;
+  float bottomH = ah * 0.4;
+  float bottomY = ay + topH;
+
+  if (lastClickedButton == -1)
+  {
+    // ---- TOP LEVEL: check row selector buttons ----
+    float rowBH = topH / 3;
+    for (int r = 0; r < 3; r++)
+    {
+      if (didMouseClick(ax, ay + r * rowBH, aw, rowBH))
+      {
+        lastClickedButton = r;
+        return;
       }
-  } else {
-    for (int i = 0; i < autocompleteSize; i++) {
-        ButtonBound thisbutton = get4WordBound(i);
-        if (i < wwp) {
-          if (didMouseClick(thisbutton.x, thisbutton.y, thisbutton.w, thisbutton.h)) {
-            currentTyped = currentTyped.substring(0, currentTyped.length()-preflen) + fourWords[i];
-          }
-        }
+    }
+
+    // Bottom: DEL | SPACE | ENTER
+    float utilW = aw / 3;
+    if (didMouseClick(ax,           bottomY, utilW, bottomH) && currentTyped.length()>0)
+    {
+      currentTyped = currentTyped.substring(0, currentTyped.length()-1);
+      return;
+    }
+    if (didMouseClick(ax + utilW,   bottomY, utilW, bottomH))
+    {
+      currentTyped += " ";
+      return;
+    }
+    if (didMouseClick(ax + 2*utilW, bottomY, utilW, bottomH))
+    {
+      nextTrial();
+      return;
+    }
+  }
+  else
+  {
+    // ---- EXPANDED ROW: check letter buttons ----
+    int start = 0, end = 0;
+    if (lastClickedButton == 0){ start=0;  end=10; }
+    if (lastClickedButton == 1){ start=10; end=19; }
+    if (lastClickedButton == 2){ start=19; end=26; }
+    int count = end - start;
+    float letterW = aw / count;
+
+    for (int i = 0; i < count; i++)
+    {
+      if (didMouseClick(ax + i * letterW, ay, letterW, topH))
+      {
+        currentTyped += alphabet[start+i];
+        lastClickedButton = -1; // auto-collapse after letter entry
+        return;
       }
-      for (int i = 26; i < 29; i++) {
-        ButtonBound thisbutton = getButtonBound(i);
-        if (didMouseClick(thisbutton.x, thisbutton.y, thisbutton.w, thisbutton.h)){
-          if (i == 26 && currentTyped.length() > 0) {
-            currentTyped = currentTyped.substring(0, currentTyped.length()-1);
-          } else if (i == 27) {
-            currentTyped += " ";
-          } else if (i == 28) {
-            nextTrial();
-          }
-        }
-      }
+    }
+
+    // Bottom: BACK | DEL | SPACE | ENTER
+    float utilW = aw / 4;
+    if (didMouseClick(ax,           bottomY, utilW, bottomH))
+    {
+      lastClickedButton = -1; // BACK: return to row selector
+      return;
+    }
+    if (didMouseClick(ax + utilW,   bottomY, utilW, bottomH) && currentTyped.length()>0)
+    {
+      currentTyped = currentTyped.substring(0, currentTyped.length()-1);
+      return;
+    }
+    if (didMouseClick(ax + 2*utilW, bottomY, utilW, bottomH))
+    {
+      currentTyped += " ";
+      return;
+    }
+    if (didMouseClick(ax + 3*utilW, bottomY, utilW, bottomH))
+    {
+      lastClickedButton = -1;
+      nextTrial();
+      return;
+    }
   }
 }
 
